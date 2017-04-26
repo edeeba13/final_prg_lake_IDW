@@ -16,9 +16,14 @@ arcpy.CheckOutExtension("Spatial")
 from arcpy.sa import *
 
 
-env.workspace = r"E:\P in GIS\Final project"
-output_fc = r"E:\P in GIS\Final project\Carlyle.gdb"
-input_data = r"E:\P in GIS\Final project\ALL_LAKE_DATA_2.csv"
+env.workspace = r"C:\Student\EMILY\final_prg"
+output_fc = r"C:\Student\EMILY\test.gdb"
+input_data = r"C:\Student\EMILY\final_prg\ALL_LAKE_DATA.csv"
+#define projection
+in_dataset = os.path.join(output_fc, "XYCoord")
+coord_sys = arcpy.SpatialReference('NAD 1983 StatePlane Missouri East FIPS 2401 (US Feet)')
+##not sure what spatial reference to use
+
 arcpy.CopyRows_management(input_data, output_fc)
 
 #arcpy.MakeXYEventLayer_management.py
@@ -35,7 +40,7 @@ print "Creating XY Layer"
 arcpy.MakeXYEventLayer_management(in_Table, x_Coords, y_Coords, out_Layer)
 
 
-outLocation = r"E:\P in GIS\Final project\Carlyle.gdb"
+outLocation = output_fc
 outFeatureClass = "XYCoord"
 ##Changed inFeature to out_layer here
 
@@ -43,10 +48,7 @@ print "Creating output feature class"
 
 arcpy.FeatureClassToFeatureClass_conversion(out_Layer, outLocation,outFeatureClass)
 
-#define projection
-in_dataset = r"E:\P in GIS\Final project\Carlyle.gdb\XYCoord"
-coord_sys = arcpy.SpatialReference('NAD 1983 StatePlane Missouri East FIPS 2401 (US Feet)')
-##not sure what spatial reference to use
+
 
 
 out_gdb = r"E:\P in GIS\Final project\Carlyle.gdb"
@@ -74,24 +76,41 @@ arcpy.DefineProjection_management(in_dataset,coord_sys)
 
 
 in_Feature = "TP mg/kg"
-field_name = "TP_mg_kg"
+field_name_string = "TP_mg_kg"
+field_name_double = "TP_mg_kg_num"
 
-arcpy.AddField_management(input_data, field_name, "LONG")
+#this needs to be in_dataset
+arcpy.AddField_management(in_dataset, field_name_double, "DOUBLE")
+
+##------------
+#update that field
+fields = [field_name_string, field_name_double]
+
+# Create update cursor for feature class
+with arcpy.da.UpdateCursor(in_dataset, fields) as cursor:
+    for row in cursor:
+        try:
+            row[1] = float(row[0])
+            print('Valid Value.')
+        except:
+            print("Null Value.")
+            row[1] = None
+
+        cursor.updateRow(row)
 
 inPointFeatures = in_dataset
-zField = "TP_mg_kg"
+zField = field_name_double#"TP_mg_kg"
 cellSize = 2000.0
 power = 2
 searchRadius = RadiusVariable(10, 150000)
 
 # Execute IDW
 print "executing interpolation"
-
 outIDW = Idw(inPointFeatures, zField, cellSize, power, searchRadius)
 
 # Save the output
 print "saving"
-outIDW.save("E:\P in GIS\Final project\output")
+outIDW.save("raster1.tif")
 
 
 
